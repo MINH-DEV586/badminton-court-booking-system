@@ -52,6 +52,7 @@ class RedisCourtCacheIntegrationTests {
     @Autowired UserAccountRepository users;
     @Autowired BookingRepository bookings;
     @Autowired TransactionTemplate transactions;
+    @Autowired org.springframework.cache.CacheManager cacheManager;
     Court court;
     UserAccount owner;
     String key;
@@ -81,6 +82,11 @@ class RedisCourtCacheIntegrationTests {
         courts.saveAndFlush(court);
         key = "badmintonhub:v1:courtDetails::" + court.getId();
         clearInvocations(courts);
+        var region = (org.springframework.cache.transaction.TransactionAwareCacheDecorator)
+            cacheManager.getCache("courtDetails");
+        var redisConfig = ((org.springframework.data.redis.cache.RedisCache) region.getTargetCache()).getCacheConfiguration();
+        assertEquals(Duration.ofSeconds(30), redisConfig.getTtlFunction().getTimeToLive("id", null),
+            "The integration context must own its 30-second Redis configuration");
     }
 
     @AfterEach
@@ -112,7 +118,7 @@ class RedisCourtCacheIntegrationTests {
         service.getCourt(court.getId());
         var ttl = redis.getExpire(key, TimeUnit.MILLISECONDS);
         assertNotNull(ttl);
-        assertTrue(ttl > 0 && ttl <= 30000);
+        assertTrue(ttl > 0 && ttl <= 30000, "Actual Redis TTL in milliseconds: " + ttl);
         redis.expire(key, Duration.ofMillis(100));
         await().atMost(Duration.ofSeconds(3)).until(() -> Boolean.FALSE.equals(redis.hasKey(key)));
         service.getCourt(court.getId());
@@ -126,8 +132,16 @@ class RedisCourtCacheIntegrationTests {
                 .contentType(MediaType.APPLICATION_JSON).content(updateJson()))
             .andExpect(status().isOk()).andExpect(jsonPath("$.baseHourlyRateVnd").value(150000));
         assertFalse(redis.hasKey(key));
+        assertFalse(org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive(),
+            "HTTP update must finish its transaction before the next service read");
+        clearInvocations(courts);
         assertEquals(150000, service.getCourt(court.getId()).baseHourlyRateVnd());
-        assertTrue(redis.opsForValue().get(key).contains("150000"));
+        verify(courts, times(1)).findById(court.getId());
+        assertFalse(org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive(),
+            "Read transaction must have committed the cache put");
+        var refreshed = redis.opsForValue().get(key);
+        assertNotNull(refreshed, "A cache miss must repopulate Redis after the database read");
+        assertTrue(refreshed.contains("150000"));
     }
 
     @Test

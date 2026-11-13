@@ -2,8 +2,8 @@ package com.badmintonhub.backend.service;
 
 import java.util.UUID;
 
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,35 +25,43 @@ import com.badmintonhub.backend.entity.Court;
 @Validated
 public class CourtService {
     private final CourtRepository courts;
+    private final Cache courtCache;
 
-    public CourtService(CourtRepository courtRepository) {
+    public CourtService(CourtRepository courtRepository, CacheManager cacheManager) {
         this.courts = courtRepository;
+        this.courtCache = java.util.Objects.requireNonNull(cacheManager.getCache(CacheConfig.COURT_DETAILS),
+            "Court details cache must be configured");
     }
 
-    @Cacheable(cacheNames = CacheConfig.COURT_DETAILS, key = "#p0")
     @Transactional(readOnly = true)
     public CourtResponse getCourt(UUID id) {
+        var cached = courtCache.get(id, CourtResponse.class);
+        if (cached != null) {
+            return cached;
+        }
         var court = courts.findById(id).orElseThrow(() -> new ApiException(
             HttpStatus.NOT_FOUND, "COURT_NOT_FOUND", "Court not found"));
-        return CourtResponse.from(court);
+        var response = CourtResponse.from(court);
+        courtCache.put(id, response);
+        return response;
     }
 
     @PreAuthorize("hasAnyRole('OWNER', 'ADMIN')")
-    @CacheEvict(cacheNames = CacheConfig.COURT_DETAILS, key = "#p0")
     @Transactional
     public CourtResponse updateCourt(@NotNull UUID id, @NotNull @Valid UpdateCourtRequest request) {
         var court = managedCourt(id);
         court.setName(request.name().strip());
         court.setBaseHourlyRateVnd(request.baseHourlyRateVnd());
         court.setActive(request.active());
+        courtCache.evict(id);
         return CourtResponse.from(court);
     }
 
     @PreAuthorize("hasAnyRole('OWNER', 'ADMIN')")
-    @CacheEvict(cacheNames = CacheConfig.COURT_DETAILS, key = "#p0")
     @Transactional
     public void deleteCourt(@NotNull UUID id) {
         courts.delete(managedCourt(id));
+        courtCache.evict(id);
     }
 
     private Court managedCourt(UUID id) {
