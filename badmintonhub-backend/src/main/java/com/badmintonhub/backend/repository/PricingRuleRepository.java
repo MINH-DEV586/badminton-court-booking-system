@@ -8,4 +8,6 @@ import java.util.UUID;
 
 public interface PricingRuleRepository extends JpaRepository<PricingRule, UUID> {
     List<PricingRule> findByCourt_IdAndDayOfWeekOrderByStartLocalTimeAsc(UUID courtId, int dayOfWeek);
+
+    List<PricingRule> findByCourt_Id(UUID courtId);
 }
