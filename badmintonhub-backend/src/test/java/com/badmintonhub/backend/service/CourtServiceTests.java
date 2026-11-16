@@ -72,6 +72,7 @@ class CourtServiceTests {
     @Import(CourtService.class)
     static class TestConfig {
         @Bean CourtRepository courts() { return mock(CourtRepository.class); }
+        @Bean com.badmintonhub.backend.repository.VenueRepository venues() { return mock(com.badmintonhub.backend.repository.VenueRepository.class); }
         @Bean CacheManager cacheManager() { return new ConcurrentMapCacheManager(CacheConfig.COURT_DETAILS); }
     }
 }
