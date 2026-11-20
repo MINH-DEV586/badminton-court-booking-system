@@ -149,6 +149,11 @@ class SecurityConfigTests {
                 .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "Authorization"))
             .andExpect(status().isOk())
             .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:5173"));
+        mvc.perform(options("/api/private").header(HttpHeaders.ORIGIN, "http://127.0.0.1:5173")
+                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
+                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "Authorization"))
+            .andExpect(status().isOk())
+            .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://127.0.0.1:5173"));
         mvc.perform(options("/api/private").header(HttpHeaders.ORIGIN, "https://untrusted.example")
                 .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST"))
             .andExpect(status().isForbidden());

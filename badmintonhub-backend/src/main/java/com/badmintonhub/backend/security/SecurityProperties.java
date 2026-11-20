@@ -16,7 +16,7 @@ public record SecurityProperties(
     @DefaultValue("badmintonhub") @NotBlank String issuer,
     @DefaultValue("15m") Duration accessTokenTtl,
     @DefaultValue("7d") Duration refreshTokenTtl,
-    @DefaultValue({"http://localhost:5173", "http://localhost:3000"}) List<String> allowedOrigins
+    @DefaultValue({"http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000", "http://127.0.0.1:3000"}) List<String> allowedOrigins
 ) {
     @AssertTrue(message = "Token lifetimes must be positive and access token lifetime must be shorter than refresh token lifetime")
     public boolean isTokenLifetimeValid() {
