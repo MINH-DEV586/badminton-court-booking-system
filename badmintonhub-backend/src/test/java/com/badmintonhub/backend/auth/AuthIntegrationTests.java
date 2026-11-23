@@ -47,10 +47,10 @@ class AuthIntegrationTests {
     }
 
     @Test
-    void registerHashesPasswordNormalizesEmailAndPreventsRoleInjection() throws Exception {
+    void registerHashesPasswordNormalizesEmailAndDefaultsToCustomer() throws Exception {
         var result = mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                    {"email":"Customer@Example.com","password":"secret123","fullName":" Customer ","role":"ADMIN"}
+                    {"email":"Customer@Example.com","password":"secret123","fullName":" Customer "}
                     """))
             .andExpect(status().isCreated()).andExpect(jsonPath("$.user.role").value("CUSTOMER"))
             .andExpect(jsonPath("$.user.email").value("customer@example.com"))
@@ -66,6 +66,40 @@ class AuthIntegrationTests {
         mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + body.get("accessToken").asText()))
             .andExpect(status().isOk()).andExpect(jsonPath("$.email").value("customer@example.com"))
             .andExpect(jsonPath("$.passwordHash").doesNotExist());
+    }
+
+    @Test
+    void registrationPersistsChosenRoleAndIssuesMatchingPermissions() throws Exception {
+        for (var role : AuthDtos.RegistrationRole.values()) {
+            var email = role.name().toLowerCase() + "@example.com";
+            var result = mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
+                    .content(mapper.writeValueAsString(Map.of("email", email, "password", "secret123",
+                        "fullName", "Account", "role", role.name()))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.user.role").value(role.name())).andReturn();
+            assertEquals(role.name(), users.findByEmail(email).orElseThrow().getRole().name());
+            var token = mapper.readTree(result.getResponse().getContentAsString()).get("accessToken").asText();
+            mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.role").value(role.name()));
+            mvc.perform(get("/api/owner/venues").header("Authorization", "Bearer " + token))
+                .andExpect(status().is(role == AuthDtos.RegistrationRole.OWNER ? 200 : 403));
+            mvc.perform(get("/api/admin/users").header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+            mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                    .content(loginJson(email, "secret123")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.user.role").value(role.name()));
+        }
+    }
+
+    @Test
+    void publicRegistrationRejectsAdminAndUnknownRoles() throws Exception {
+        for (var role : new String[]{"ADMIN", "UNKNOWN"}) {
+            mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
+                    .content(mapper.writeValueAsString(Map.of("email", "invalid-role@example.com",
+                        "password", "secret123", "fullName", "Account", "role", role))))
+                .andExpect(status().isBadRequest());
+        }
+        assertEquals(0, users.count());
     }
 
     @Test

@@ -39,14 +39,13 @@ import {
   useData,
 } from "./ui.jsx";
 
-const PREVIEW =
-  import.meta.env.DEV && import.meta.env.VITE_PREVIEW_MODE === "true";
 export function AuthPage({ register }) {
   const { navigate, notify } = useApp();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [registrationRole, setRegistrationRole] = useState("CUSTOMER");
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -68,6 +67,7 @@ export function AuthPage({ register }) {
           password,
           fullName: name.trim(),
           phone: phone.trim() || null,
+          role: registrationRole,
         });
       else await auth.login({ email: email.trim(), password });
       navigate(auth.getSession().user.role === "OWNER" ? "/owner" : "/venues");
@@ -122,6 +122,26 @@ export function AuthPage({ register }) {
             : "Đăng nhập để xem sân và đặt lịch của bạn."}
         </p>
         <form onSubmit={submit} className="stack form-stack">
+          {register && (
+            <Field
+              label="Loại tài khoản"
+              error={error?.fields?.role}
+              hint={
+                registrationRole === "OWNER"
+                  ? "Đăng sân và quản lý lịch đặt của khách."
+                  : "Tìm sân và đặt lịch chơi."
+              }
+            >
+              <select
+                value={registrationRole}
+                onChange={(event) => setRegistrationRole(event.target.value)}
+                required
+              >
+                <option value="CUSTOMER">Khách hàng</option>
+                <option value="OWNER">Chủ sân</option>
+              </select>
+            </Field>
+          )}
           {register && (
             <Field label="Họ và tên" error={error?.fields?.fullName}>
               <input
@@ -211,34 +231,6 @@ export function AuthPage({ register }) {
           </strong>
           <span>Thông tin sân và lịch trống hiển thị sau khi đăng nhập.</span>
         </div>
-        {PREVIEW && (
-          <div className="preview-accounts">
-            <small>TÀI KHOẢN TRẢI NGHIỆM</small>
-            <div>
-              {[
-                ["minhanh", "Người chơi"],
-                ["chusan", "Chủ sân"],
-                ["admin", "Admin"],
-              ].map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => {
-                    setEmail(`${id}@badmintonhub.test`);
-                    setPassword(import.meta.env.VITE_PREVIEW_PASSWORD || "");
-                    setError(null);
-                  }}
-                >
-                  {label}
-                  <ArrowRight size={12} />
-                </button>
-              ))}
-            </div>
-            <span>
-              Chọn vai trò để điền tài khoản mẫu, sau đó nhấn Đăng nhập.
-            </span>
-          </div>
-        )}
       </section>
     </div>
   );

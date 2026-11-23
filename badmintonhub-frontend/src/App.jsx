@@ -4,7 +4,7 @@ import React, {
   useState,
   useSyncExternalStore,
 } from "react";
-import { Check, LogOut, UserRound, X } from "lucide-react";
+import { Check, UserRound, X } from "lucide-react";
 import { api, auth } from "./api.js";
 import { roles } from "./domain.js";
 import { AppContext, Modal } from "./ui.jsx";
@@ -21,8 +21,6 @@ import { OwnerPage, AdminPage } from "./management.jsx";
 
 const currentPath = () =>
   (window.location.hash.slice(1) || "/login").split("?")[0];
-export const isPreview =
-  import.meta.env.DEV && import.meta.env.VITE_PREVIEW_MODE === "true";
 
 export default function App() {
   const session = useSyncExternalStore(
@@ -202,17 +200,6 @@ export default function App() {
             )}
           </div>
         </header>
-        {user && isPreview && (
-          <div className="preview-strip">
-            <span className="status-dot" />
-            Máy chủ trải nghiệm · Dữ liệu mẫu được lưu trong bộ nhớ, không phải
-            đặt sân thật.
-            <button onClick={logout}>
-              <LogOut size={13} />
-              Đổi tài khoản
-            </button>
-          </div>
-        )}
         <main className={user ? "main-content wrap" : "auth-main wrap"}>
           {page}
         </main>
@@ -251,12 +238,6 @@ export default function App() {
                   Chính sách hủy và thanh toán được áp dụng theo trạng thái của
                   lịch đặt. Không chia sẻ tài khoản hoặc thông tin đăng nhập.
                 </p>
-                {isPreview && (
-                  <p>
-                    Bản chạy hiện tại dùng dữ liệu trải nghiệm; không có giao
-                    dịch chuyển tiền thật.
-                  </p>
-                )}
               </div>
             ) : (
               <div className="prose">

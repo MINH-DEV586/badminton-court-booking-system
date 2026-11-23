@@ -11,11 +11,16 @@ import java.util.UUID;
 public final class AuthDtos {
     private AuthDtos() {}
 
+    public enum RegistrationRole {
+        CUSTOMER, OWNER
+    }
+
     public record RegisterRequest(
         @NotBlank @Email @Size(max = 254) String email,
         @NotBlank @Size(min = 8, max = 72) @Utf8Password String password,
         @NotBlank @Size(max = 120) String fullName,
-        @Size(max = 30) String phone
+        @Size(max = 30) String phone,
+        RegistrationRole role
     ) {}
 
     public record LoginRequest(

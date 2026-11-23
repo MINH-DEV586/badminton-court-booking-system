@@ -36,7 +36,7 @@ Tất cả request có body dùng `Content-Type: application/json`.
 
 | Method | Endpoint | Nội dung / quyền |
 | --- | --- | --- |
-| POST | `/api/auth/register` | `email`, `password`, `fullName`, `phone` tùy chọn; công khai |
+| POST | `/api/auth/register` | `email`, `password`, `fullName`, `phone` tùy chọn, `role` là `CUSTOMER` hoặc `OWNER`; công khai |
 | POST | `/api/auth/login` | `email`, `password`; công khai |
 | POST | `/api/auth/refresh` | `refreshToken`; công khai, cần refresh token hợp lệ |
 | POST | `/api/auth/logout` | `refreshToken`; thu hồi refresh token, trả `204` |
@@ -45,7 +45,7 @@ Tất cả request có body dùng `Content-Type: application/json`.
 | * | `/api/admin/**` | `ADMIN` |
 | * | Các endpoint còn lại | Cần access token |
 
-Đăng ký luôn tạo tài khoản `CUSTOMER`. Client không được tự chọn `OWNER` hoặc `ADMIN`; việc cấp các quyền này phải qua quy trình quản trị riêng. Tiền tố `/api/owner/**` và `/api/admin/**` là quy tắc bảo vệ cho các API tương ứng; chưa tạo API nghiệp vụ sân/quản trị trong phần này. Có thể dùng `@PreAuthorize` cho kiểm tra quyền ở cấp method.
+Đăng ký cho phép chọn `CUSTOMER` hoặc `OWNER`. Backend lưu vai trò đã chọn và cấp token tương ứng. Yêu cầu cũ bỏ qua `role` tiếp tục tạo tài khoản `CUSTOMER`. Việc cấp quyền `ADMIN` thuộc quy trình quản trị. Tiền tố `/api/owner/**` và `/api/admin/**` bảo vệ các API tương ứng. Có thể dùng `@PreAuthorize` để kiểm tra quyền ở cấp method.
 
 Ví dụ đăng ký:
 
@@ -54,7 +54,8 @@ Ví dụ đăng ký:
   "email": "customer@example.com",
   "password": "your-password",
   "fullName": "Nguyen Van A",
-  "phone": "0901234567"
+  "phone": "0901234567",
+  "role": "CUSTOMER"
 }
 ```
 

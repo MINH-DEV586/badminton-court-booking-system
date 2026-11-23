@@ -40,8 +40,8 @@ public class AuthService {
         user.setPasswordHash(encoder.encode(request.password()));
         user.setFullName(request.fullName().strip());
         user.setPhone(request.phone() == null ? null : request.phone().strip());
-        // Public registration never accepts privileged roles from the client.
-        user.setRole(UserAccount.Role.CUSTOMER);
+        var role = request.role() == null ? AuthDtos.RegistrationRole.CUSTOMER : request.role();
+        user.setRole(UserAccount.Role.valueOf(role.name()));
         try {
             users.saveAndFlush(user);
         } catch (DataIntegrityViolationException exception) {
